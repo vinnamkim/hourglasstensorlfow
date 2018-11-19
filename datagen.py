@@ -98,7 +98,8 @@ class DataGenerator():
 			self.toReduce = True
 			self.weightJ = remove_joints
 		
-		self.letter = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N']
+		#self.letter = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N']
+		self.letter = []
 		self.img_dir = img_dir
 		self.train_data_file = train_data_file
 		self.images = os.listdir(img_dir)
@@ -128,8 +129,9 @@ class DataGenerator():
 			line = line.strip()
 			line = line.split(' ')
 			name = line[0]
-			box = list(map(int,line[1:5]))
-			joints = list(map(int,line[5:]))
+			func = lambda x : int(float(x))
+			box = list(map(func,line[1:5]))
+			joints = list(map(func,line[5:]))
 			if self.toReduce:
 				joints = self._reduce_joints(joints)
 			if joints == [-1] * len(joints):

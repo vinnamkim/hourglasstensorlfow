@@ -33,6 +33,8 @@ import sys
 import datetime
 import os
 
+model_dtype = tf.float32
+
 class HourglassModel():
 	""" HourglassModel class: (to be renamed)
 	Generate TensorFlow model to train and predict Human Pose from images (soon videos)
@@ -137,14 +139,14 @@ class HourglassModel():
 		with tf.device(self.gpu):
 			with tf.name_scope('inputs'):
 				# Shape Input Image - batchSize: None, height: 256, width: 256, channel: 3 (RGB)
-				self.img = tf.placeholder(dtype= tf.float32, shape= (None, 256, 256, 3), name = 'input_img')
+				self.img = tf.placeholder(dtype= model_dtype, shape= (None, 256, 256, 3), name = 'input_img')
 				if self.w_loss:
-					self.weights = tf.placeholder(dtype = tf.float32, shape = (None, self.outDim))
+					self.weights = tf.placeholder(dtype = model_dtype, shape = (None, self.outDim))
 				# Shape Ground Truth Map: batchSize x nStack x 64 x 64 x outDim
-				self.gtMaps = tf.placeholder(dtype = tf.float32, shape = (None, self.nStack, 64, 64, self.outDim))
+				self.gtMaps = tf.placeholder(dtype = model_dtype, shape = (None, self.nStack, 64, 64, self.outDim))
 				# TODO : Implement weighted loss function
 				# NOT USABLE AT THE MOMENT
-				#weights = tf.placeholder(dtype = tf.float32, shape = (None, self.nStack, 1, 1, self.outDim))
+				#weights = tf.placeholder(dtype = model_dtype, shape = (None, self.nStack, 1, 1, self.outDim))
 			inputTime = time.time()
 			print('---Inputs : Done (' + str(int(abs(inputTime-startTime))) + ' sec.)')
 			if self.attention:
@@ -237,7 +239,7 @@ class HourglassModel():
 				for i in range(epochSize):
 					# DISPLAY PROGRESS BAR
 					# TODO : Customize Progress Bar
-					percent = ((i+1)/epochSize) * 100
+					percent = (i+1) / float(epochSize) * 100
 					num = np.int(20*percent/100)
 					tToEpoch = int((time.time() - epochstartTime) * (100 - percent)/(percent))
 					sys.stdout.write('\r Train: {0}>'.format("="*num) + "{0}>".format(" "*(20-num)) + '||' + str(percent)[:4] + '%' + ' -cost: ' + str(cost)[:6] + ' -avg_loss: ' + str(avg_cost)[:5] + ' -timeToEnd: ' + str(tToEpoch) + ' sec.')
@@ -498,7 +500,7 @@ class HourglassModel():
 		"""
 		with tf.name_scope(name):
 			# Kernel for convolution, Xavier Initialisation
-			kernel = tf.Variable(tf.contrib.layers.xavier_initializer(uniform=False)([kernel_size,kernel_size, inputs.get_shape().as_list()[3], filters]), name= 'weights')
+			kernel = tf.Variable(tf.contrib.layers.xavier_initializer(uniform=False, dtype=model_dtype)([kernel_size,kernel_size, inputs.get_shape().as_list()[3], filters]), name= 'weights', dtype=model_dtype)
 			conv = tf.nn.conv2d(inputs, kernel, [1,strides,strides,1], padding=pad, data_format='NHWC')
 			if self.w_summary:
 				with tf.device('/cpu:0'):
@@ -518,7 +520,7 @@ class HourglassModel():
 			norm			: Output Tensor
 		"""
 		with tf.name_scope(name):
-			kernel = tf.Variable(tf.contrib.layers.xavier_initializer(uniform=False)([kernel_size,kernel_size, inputs.get_shape().as_list()[3], filters]), name= 'weights')
+			kernel = tf.Variable(tf.contrib.layers.xavier_initializer(uniform=False, dtype=model_dtype)([kernel_size,kernel_size, inputs.get_shape().as_list()[3], filters]), name= 'weights', dtype=model_dtype)
 			conv = tf.nn.conv2d(inputs, kernel, [1,strides,strides,1], padding='VALID', data_format='NHWC')
 			norm = tf.contrib.layers.batch_norm(conv, 0.9, epsilon=1e-5, activation_fn = tf.nn.relu, is_training = self.training)
 			if self.w_summary:
@@ -683,7 +685,7 @@ class HourglassModel():
 			pad = tf.pad(inputs, np.array([[0,0],[1,1],[1,1],[0,0]]))
 			U = self._conv(pad, filters=1, kernel_size=3, strides=1)
 			pad_2 = tf.pad(U, np.array([[0,0],[padding,padding],[padding,padding],[0,0]]))
-			sharedK = tf.Variable(tf.contrib.layers.xavier_initializer(uniform=False)([lrnSize,lrnSize, 1, 1]), name= 'shared_weights')
+			sharedK = tf.Variable(tf.contrib.layers.xavier_initializer(uniform=False)([lrnSize,lrnSize, 1, 1]), name= 'shared_weights', dtype=model_dtype)
 			Q = []
 			C = []
 			for i in range(itersize):
